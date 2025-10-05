@@ -73,11 +73,13 @@ export default function Home() {
     department: string;
     mrn: string;
   }) => {
+    console.log("handleCreateCall", formData);
     const roomName = generateRoomName();
     setActiveRoomName(roomName);
 
     const twilioUrl = new URL(config.twilioBaseURL);
     twilioUrl.searchParams.set("room", roomName);
+    twilioUrl.searchParams.set("language", selectedLanguage);
     twilioUrl.searchParams.set("xtr", "1");
     const link = twilioUrl.toString();
 

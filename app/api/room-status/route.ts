@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import twilio from "twilio";
+import type { RoomInstance } from "twilio/lib/rest/video/v1/room";
 
 export async function GET(request: NextRequest) {
   try {
@@ -33,14 +34,12 @@ export async function GET(request: NextRequest) {
     const client = twilio(apiKey, apiSecret, { accountSid });
 
     // Find in-progress room by uniqueName
-    let room;
-    const inProgressRooms = await client.video.v1.rooms.list({
+    const inProgressRooms: RoomInstance[] = await client.video.v1.rooms.list({
       status: "in-progress",
       limit: 50,
     });
-    room = inProgressRooms.find(
-      (r) => r.uniqueName === roomName || r.unique_name === roomName
-    );
+
+    const room = inProgressRooms.find((r) => r.uniqueName === roomName);
 
     if (!room) {
       console.log(`[room-status] room not found for name=${roomName}`);
@@ -55,6 +54,7 @@ export async function GET(request: NextRequest) {
     const participants = await client.video.v1
       .rooms(room.sid)
       .participants.list({ status: "connected", limit: 50 });
+
     const participantCount = participants.length;
 
     console.log(
@@ -65,19 +65,29 @@ export async function GET(request: NextRequest) {
       connected: participantCount > 0,
       participantCount,
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
+    // Keep logs useful without using `any`
+    const e = err as Partial<{
+      message: string;
+      code: number;
+      status: number;
+      stack: string;
+    }>;
     console.error("/room-status error", err);
     console.error("Error details:", {
-      message: err.message,
-      code: err.code,
-      status: err.status,
-      stack: err.stack,
+      message: e?.message,
+      code: e?.code,
+      status: e?.status,
+      stack: e?.stack,
     });
     return NextResponse.json(
       {
         error: "internal_error",
-        message: err.message,
-        details: process.env.NODE_ENV === "development" ? err.stack : undefined,
+        message: e?.message ?? "Unexpected error",
+        details:
+          process.env.NODE_ENV === "development"
+            ? e?.stack ?? String(err)
+            : undefined,
       },
       { status: 500 }
     );

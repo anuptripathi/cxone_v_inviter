@@ -18,9 +18,12 @@ export default function VideoCallLoading({
   useEffect(() => {
     if (!roomName) return;
 
-    let intervalId: NodeJS.Timeout; // <— declare interval id
+    const intervalId: ReturnType<typeof setInterval> = setInterval(
+      pollRoomStatus,
+      3000
+    );
 
-    const pollRoomStatus = async () => {
+    async function pollRoomStatus() {
       try {
         const response = await fetch(
           `/api/room-status?roomName=${encodeURIComponent(roomName)}`
@@ -32,15 +35,13 @@ export default function VideoCallLoading({
 
         if (isReady) {
           setShowJoinButton(true);
-          clearInterval(intervalId); // ✅ stop polling when ready
+          clearInterval(intervalId);
         }
       } catch (error) {
         console.error("Error polling room status:", error);
       }
-    };
+    }
 
-    // Start polling
-    intervalId = setInterval(pollRoomStatus, 3000);
     pollRoomStatus(); // Initial call
 
     return () => clearInterval(intervalId);
